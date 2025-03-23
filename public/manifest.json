@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+
+  "name": "Argus",
+  "description": "Extension for Argus: monitor your website usage",
+  "version": "1.0",
+
+  "action": {
+    "default_popup": "index.html"
+  },
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "permissions": ["storage", "tabs"],
+
+  "host_permissions": ["<all_urls>"]
+}
