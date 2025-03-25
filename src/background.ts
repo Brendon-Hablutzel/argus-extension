@@ -1,3 +1,5 @@
+import { getEndpoint } from './storage'
+
 console.log('background script loaded')
 
 export const getFocusedTabs = async () => {
@@ -16,7 +18,13 @@ export const getFocusedTabs = async () => {
 }
 
 setInterval(async () => {
-  const focusedTabs = await getFocusedTabs()
+  const endpoint = await getEndpoint()
+  console.log('endpoint:', endpoint)
 
-  console.log('recorded focused tabs', focusedTabs)
-}, 1000)
+  if (!endpoint) {
+    return
+  }
+
+  const focusedTabs = await getFocusedTabs()
+  console.log('recording focused tabs:', focusedTabs)
+}, 3000)

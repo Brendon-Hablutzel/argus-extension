@@ -25,7 +25,7 @@ export default defineConfig({
         background: './src/background.ts',
       },
       output: {
-        entryFileNames: '[name].js', // Ensures the background script is named `background.js`
+        entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
         assetFileNames: '[name].[ext]',
       },
