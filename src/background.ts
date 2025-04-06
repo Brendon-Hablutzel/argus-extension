@@ -18,7 +18,6 @@ const getFocusedTabs = async () => {
 }
 
 interface ActiveTab {
-  timestamp: number
   url: string
   title: string
   status: 'loading' | 'unloaded' | 'complete'
@@ -26,6 +25,7 @@ interface ActiveTab {
 
 const recordActiveTab = async (
   endpoint: string,
+  timestamp: Date,
   tab: ActiveTab | undefined
 ) => {
   const res = await fetch(endpoint, {
@@ -34,6 +34,7 @@ const recordActiveTab = async (
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
+      timestamp: timestamp.getTime(),
       tab,
     }),
   })
@@ -70,9 +71,9 @@ setInterval(async () => {
 
   const res = await recordActiveTab(
     endpoint,
+    now,
     activeTab
       ? {
-          timestamp: now.getTime(),
           url: activeTab.url ?? '',
           title: activeTab.title ?? '',
           // must be one of theses becaues of prior check
