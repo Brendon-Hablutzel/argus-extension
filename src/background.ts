@@ -1,4 +1,4 @@
-import { getEndpoint } from './storage'
+import { getEndpoint, getProfileId } from './storage'
 
 console.log('background script loaded')
 
@@ -21,12 +21,13 @@ interface ActiveTab {
   url: string
   title: string
   status: 'loading' | 'unloaded' | 'complete'
+  profileId: string
 }
 
 const recordActiveTab = async (
   endpoint: string,
   timestamp: Date,
-  tab: ActiveTab | undefined
+  tab: ActiveTab
 ) => {
   const res = await fetch(endpoint, {
     method: 'POST',
@@ -49,37 +50,46 @@ setInterval(async () => {
   console.log('endpoint:', endpoint)
 
   if (!endpoint) {
+    console.log('skipping recording')
+    return
+  }
+
+  const profileId = await getProfileId()
+  console.log('profile id:', profileId)
+
+  if (!profileId) {
+    console.log('skipping recording')
     return
   }
 
   const focusedTabs = await getFocusedTabs()
 
   const activeTab = focusedTabs[0] as chrome.tabs.Tab | undefined
-  console.log('recording active tab:', activeTab)
+
+  console.log('active tab:', activeTab)
+
+  if (activeTab === undefined) {
+    console.log('skipping recording')
+    return
+  }
 
   if (
-    activeTab &&
     activeTab.status !== 'loading' &&
     activeTab.status !== 'unloaded' &&
     activeTab.status !== 'complete'
   ) {
     console.error('invalid tab status:', activeTab.status)
+    console.log('skipping recording')
     return
   }
 
   const now = new Date()
 
-  const res = await recordActiveTab(
-    endpoint,
-    now,
-    activeTab
-      ? {
-          url: activeTab.url ?? '',
-          title: activeTab.title ?? '',
-          // must be one of theses becaues of prior check
-          status: activeTab.status as 'loading' | 'unloaded' | 'complete',
-        }
-      : undefined
-  )
+  const res = await recordActiveTab(endpoint, now, {
+    url: activeTab.url ?? '',
+    title: activeTab.title ?? '',
+    status: activeTab.status,
+    profileId,
+  })
   console.log(res)
-}, 3000)
+}, 1000)

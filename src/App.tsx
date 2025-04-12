@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react'
-import { getEndpoint, setEndpoint } from './storage'
+import { getEndpoint, getProfileId, setEndpoint, setProfileId } from './storage'
 
 const App = () => {
   const [displayEndpoint, setDisplayEndpoint] = useState<string>('')
+  const [displayProfileId, setDisplayProfileId] = useState<string>('')
 
   useEffect(() => {
     ;(async () => {
-      const fetchedEndpoint = await getEndpoint()
-      setDisplayEndpoint(fetchedEndpoint)
+      await Promise.allSettled([
+        (async () => {
+          const fetchedEndpoint = await getEndpoint()
+          setDisplayEndpoint(fetchedEndpoint)
+        })(),
+        (async () => {
+          const fetchedProfileId = await getProfileId()
+          setDisplayProfileId(fetchedProfileId)
+        })(),
+      ])
     })()
   }, [])
 
@@ -20,6 +29,7 @@ const App = () => {
 
     try {
       await setEndpoint(displayEndpoint)
+      await setProfileId(displayProfileId)
       setShowSubmitted('submitted!')
       await new Promise((resolve) => setTimeout(resolve, 750))
       setShowSubmitted(null)
@@ -30,27 +40,36 @@ const App = () => {
   }
 
   return (
-    <div className="p-2 w-52 font-overpass">
-      <h1 className="text-3xl">Argus</h1>
-      <h3>Monitor your website usage</h3>
+    <div className="p-2 w-72 font-overpass">
+      <h1 className="text-3xl text-center">Argus</h1>
+      <h3 className="mb-1 text-center">Monitor your website usage</h3>
       <form onSubmit={handleEndpointChange}>
         <div className="flex flex-col gap-1">
-          <div className="text-base">Endpoint</div>
-          <div className="flex gap-1">
+          <div className="flex flex-col p-2 border-[1px] border-black/50 rounded-md">
+            <h5 className="text-sm">Endpoint</h5>
             <input
-              className="text-sm p-1 border-[1px] rounded-md"
+              className="text-sm p-1 border-[1px] rounded-md mb-3"
               placeholder="none"
               type="text"
               value={displayEndpoint}
               onChange={(e) => setDisplayEndpoint(e.target.value)}
             />
-            <button
-              className="text-sm hover:cursor-pointer bg-gray-200 p-1 rounded-md border-[1px]"
-              type="submit"
-            >
-              Set
-            </button>
+
+            <h5 className="text-sm">Profile</h5>
+            <input
+              className="text-sm p-1 border-[1px] rounded-md"
+              placeholder="none"
+              type="text"
+              value={displayProfileId}
+              onChange={(e) => setDisplayProfileId(e.target.value)}
+            />
           </div>
+          <button
+            className="text-sm hover:cursor-pointer bg-gray-200 p-1 rounded-md border-[1px] border-black/50"
+            type="submit"
+          >
+            Update Config
+          </button>
           {showSubmitted ? <div>{showSubmitted}</div> : null}
         </div>
       </form>
