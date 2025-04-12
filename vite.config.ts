@@ -21,8 +21,9 @@ export default defineConfig({
     outDir: 'build',
     rollupOptions: {
       input: {
-        main: './index.html',
-        background: './src/background.ts',
+        popup: './src/popup/index.html',
+        dashboard: './src/dashboard/index.html',
+        background: './src/popup/background.ts',
       },
       output: {
         entryFileNames: '[name].js',

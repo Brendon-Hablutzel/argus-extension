@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getEndpoint, getProfileId, setEndpoint, setProfileId } from './storage'
 
-const App = () => {
+const Popup = () => {
   const [displayEndpoint, setDisplayEndpoint] = useState<string>('')
   const [displayProfileId, setDisplayProfileId] = useState<string>('')
 
@@ -78,4 +78,4 @@ const App = () => {
   )
 }
 
-export default App
+export default Popup

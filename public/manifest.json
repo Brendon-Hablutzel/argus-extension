@@ -6,7 +6,7 @@
   "version": "1.0",
 
   "action": {
-    "default_popup": "index.html"
+    "default_popup": "src/popup/index.html"
   },
 
   "background": {
@@ -16,5 +16,7 @@
 
   "permissions": ["storage", "tabs"],
 
-  "host_permissions": ["<all_urls>"]
+  "host_permissions": ["<all_urls>"],
+
+  "options_page": "src/dashboard/index.html"
 }
