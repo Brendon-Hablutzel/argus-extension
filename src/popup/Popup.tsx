@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getEndpoint, getProfileId, setEndpoint, setProfileId } from './storage'
+import { getEndpoint, getProfileId, setEndpoint, setProfileId } from './util'
 
 const Popup = () => {
   const [displayEndpoint, setDisplayEndpoint] = useState<string>('')

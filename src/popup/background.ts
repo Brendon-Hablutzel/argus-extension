@@ -1,4 +1,4 @@
-import { getEndpoint, getProfileId } from './storage'
+import { getEndpoint, getProfileId } from './util'
 
 console.log('background script loaded')
 
@@ -47,18 +47,16 @@ const recordActiveTab = async (
 
 setInterval(async () => {
   const endpoint = await getEndpoint()
-  console.log('endpoint:', endpoint)
 
   if (!endpoint) {
-    console.log('skipping recording')
+    console.log('no endpoint, skipping recording')
     return
   }
 
   const profileId = await getProfileId()
-  console.log('profile id:', profileId)
 
   if (!profileId) {
-    console.log('skipping recording')
+    console.log('no profile id, skipping recording')
     return
   }
 
@@ -66,10 +64,8 @@ setInterval(async () => {
 
   const activeTab = focusedTabs[0] as chrome.tabs.Tab | undefined
 
-  console.log('active tab:', activeTab)
-
   if (activeTab === undefined) {
-    console.log('skipping recording')
+    console.log('no active tab, skipping recording')
     return
   }
 
@@ -78,12 +74,20 @@ setInterval(async () => {
     activeTab.status !== 'unloaded' &&
     activeTab.status !== 'complete'
   ) {
-    console.error('invalid tab status:', activeTab.status)
-    console.log('skipping recording')
+    console.log(`invalid tab status ${activeTab.status}, skipping recording`)
     return
   }
 
   const now = new Date()
+
+  console.log(
+    'recording tab: endpoint =',
+    endpoint,
+    'profileId =',
+    profileId,
+    'activeTab =',
+    activeTab
+  )
 
   const res = await recordActiveTab(endpoint, now, {
     url: activeTab.url ?? '',
@@ -91,5 +95,6 @@ setInterval(async () => {
     status: activeTab.status,
     profileId,
   })
-  console.log(res)
+
+  console.log('response', res)
 }, 1000)
