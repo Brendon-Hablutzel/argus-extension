@@ -11,16 +11,23 @@ import {
   YAxis,
 } from 'recharts'
 
+const pad = (n: number) => n.toString().padStart(2, '0')
+
 const toDatetimeLocal = (date: Date | null): string => {
   if (date === null) {
     return ''
   }
 
-  const pad = (n: number) => n.toString().padStart(2, '0')
   return (
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
     `T${pad(date.getHours())}:${pad(date.getMinutes())}`
   )
+}
+
+const roundToHour = (t: number) => {
+  const d = new Date(t)
+  d.setMinutes(0, 0, 0)
+  return d.getTime()
 }
 
 const fromDatetimeLocal = (value: string): Date | null => {
@@ -41,7 +48,7 @@ const WebsitesFrequencyBarChart = ({
 }) => {
   const rechartsData = sitesByDuration.map((entry) => ({
     url: entry[0],
-    count: entry[1],
+    time: entry[1],
   }))
 
   return (
@@ -51,7 +58,28 @@ const WebsitesFrequencyBarChart = ({
         <XAxis type="number" tickFormatter={formatDuration} />
         <YAxis dataKey="url" type="category" width={150} interval={0} />
         <Tooltip formatter={formatDuration} />
-        <Bar dataKey="count" fill="#8884d8" />
+        <Bar dataKey="time" fill="#347deb" />
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+const EventsByHourChart = ({
+  data,
+}: {
+  data: { hour: string; time: number }[]
+}) => {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart
+        data={data}
+        margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="hour" angle={-45} textAnchor="end" height={60} />
+        <YAxis tickFormatter={formatDuration} />
+        <Tooltip formatter={formatDuration} />
+        <Bar dataKey="time" fill="#347deb" />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -97,6 +125,40 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
     return map
   }, [fetchedEvents])
 
+  const eventsByHour = useMemo(() => {
+    if (fetchedEvents === null) {
+      return undefined
+    }
+
+    const timestamps = fetchedEvents.map((e) => e.timestamp)
+    const minTime = Math.min(...timestamps)
+    const maxTime = Math.max(...timestamps)
+
+    const start = roundToHour(minTime)
+    const end = roundToHour(maxTime)
+
+    const counts: Record<string, number> = {}
+    for (const e of fetchedEvents) {
+      const d = new Date(e.timestamp)
+      d.setMinutes(0, 0, 0)
+      const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`
+      counts[key] = (counts[key] || 0) + 1
+    }
+
+    const hourlyData: { hour: string; time: number }[] = []
+    // 3_600_000 is ms per hour
+    for (let time = start; time <= end; time += 3_600_000) {
+      const d = new Date(time)
+      const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`
+      hourlyData.push({
+        hour: key,
+        time: counts[key] || 0,
+      })
+    }
+
+    return hourlyData
+  }, [fetchedEvents])
+
   const getMetrics = useCallback(async () => {
     setLoading(true)
 
@@ -133,7 +195,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
   return (
     <div className="flex justify-center">
       <div className="w-[100%] max-w-[1000px] border-[1px] border-black/20 rounded-lg p-4">
-        <div className="flex gap-3 justify-between items-center">
+        <div className="flex gap-3 justify-between items-center flex-wrap">
           <div className="flex gap-2">
             <label
               className="font-bold text-sm flex items-center"
@@ -142,7 +204,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
               Since
             </label>
             <input
-              className="px-1 text-base border-[0.5px] border-black/20 rounded-lg"
+              className="px-2 text-base border-[0.5px] border-black/20 rounded-lg"
               type="datetime-local"
               id="since-time"
               value={toDatetimeLocal(since)}
@@ -157,7 +219,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
               Until
             </label>
             <input
-              className="px-1 text-base border-[0.5px] border-black/20 rounded-lg"
+              className="px-2 text-base border-[0.5px] border-black/20 rounded-lg"
               type="datetime-local"
               id="until-time"
               value={toDatetimeLocal(until)}
@@ -166,7 +228,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
           </div>
           <div className="flex gap-2">
             <label
-              className="px-2 font-bold text-sm flex items-center"
+              className="font-bold text-sm flex items-center whitespace-nowrap"
               htmlFor="profile-ids"
             >
               Profile ID(s)
@@ -175,7 +237,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
               className="text-base px-2 border-[0.5px] border-black/20 rounded-lg"
               type="text"
               id="profile-ids"
-              placeholder="profile1,profile2..."
+              placeholder="profile1,profile2,..."
               value={profileIds.join(',')}
               onChange={(e) => setProfileIds(e.target.value.split(','))}
             />
@@ -200,6 +262,9 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
               {sitesByDuration ? (
                 <WebsitesFrequencyBarChart sitesByDuration={sitesByDuration} />
               ) : null}
+            </div>
+            <div>
+              {eventsByHour ? <EventsByHourChart data={eventsByHour} /> : null}
             </div>
             {fetchedEvents ? (
               <p>
