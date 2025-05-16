@@ -26,7 +26,7 @@ export const formatDuration = (seconds: number) => {
     }
   }
 
-  return parts.join(' ')
+  return (parts.length > 2 ? parts.slice(0, 2) : parts).join(' ')
 }
 
 export const fetchMetrics = async (

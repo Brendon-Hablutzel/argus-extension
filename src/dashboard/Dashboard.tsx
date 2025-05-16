@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchMetrics, formatDuration, getEndpoint, setEndpoint } from './util'
 import { TabEventType } from './types'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 
 const toDatetimeLocal = (date: Date | null): string => {
   if (date === null) {
@@ -23,6 +32,29 @@ const fromDatetimeLocal = (value: string): Date | null => {
   const [year, month, day] = datePart.split('-').map(Number)
   const [hour, minute] = timePart.split(':').map(Number)
   return new Date(year, month - 1, day, hour, minute)
+}
+
+const WebsitesFrequencyBarChart = ({
+  sitesByDuration,
+}: {
+  sitesByDuration: [string, number][]
+}) => {
+  const rechartsData = sitesByDuration.map((entry) => ({
+    url: entry[0],
+    count: entry[1],
+  }))
+
+  return (
+    <ResponsiveContainer width="100%" height={400}>
+      <BarChart data={rechartsData} layout="vertical" margin={{ left: 50 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis type="number" tickFormatter={formatDuration} />
+        <YAxis dataKey="url" type="category" width={150} interval={0} />
+        <Tooltip formatter={formatDuration} />
+        <Bar dataKey="count" fill="#8884d8" />
+      </BarChart>
+    </ResponsiveContainer>
+  )
 }
 
 const Dashboard = ({ endpoint }: { endpoint: string }) => {
@@ -100,7 +132,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
 
   return (
     <div className="flex justify-center">
-      <div className="w-[100%] max-w-[1000px] border-[1px] border-black/20 rounded-lg p-2">
+      <div className="w-[100%] max-w-[1000px] border-[1px] border-black/20 rounded-lg p-4">
         <div className="flex gap-3 justify-between items-center">
           <div className="flex gap-2">
             <label
@@ -110,7 +142,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
               Since
             </label>
             <input
-              className="text-base"
+              className="px-1 text-base border-[0.5px] border-black/20 rounded-lg"
               type="datetime-local"
               id="since-time"
               value={toDatetimeLocal(since)}
@@ -125,7 +157,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
               Until
             </label>
             <input
-              className="text-base"
+              className="px-1 text-base border-[0.5px] border-black/20 rounded-lg"
               type="datetime-local"
               id="until-time"
               value={toDatetimeLocal(until)}
@@ -134,29 +166,30 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
           </div>
           <div className="flex gap-2">
             <label
-              className="font-bold text-sm flex items-center"
+              className="px-2 font-bold text-sm flex items-center"
               htmlFor="profile-ids"
             >
               Profile ID(s)
             </label>
             <input
-              className="text-base px-1"
+              className="text-base px-2 border-[0.5px] border-black/20 rounded-lg"
               type="text"
               id="profile-ids"
-              placeholder="profile1,profile2"
+              placeholder="profile1,profile2..."
               value={profileIds.join(',')}
               onChange={(e) => setProfileIds(e.target.value.split(','))}
             />
           </div>
           <div>
             <button
-              className="text-sm hover:cursor-pointer px-2 py-1 border-[1px] border-black/20 rounded-lg font-bold"
+              className="text-base hover:cursor-pointer px-2 border-[1px] border-black/20 rounded-lg font-bold"
               onClick={handleRefetch}
             >
               Refetch
             </button>
           </div>
         </div>
+        <br />
         {loading ? (
           <div>loading ...</div>
         ) : error ? (
@@ -164,16 +197,16 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
         ) : (
           <div className="flex flex-col gap-2">
             <div>
-              <h2 className="text-xl">Sites by time</h2>
-              <ul>
-                {sitesByDuration?.map((siteEntry) => (
-                  <li>
-                    {siteEntry[0]} : {formatDuration(siteEntry[1])}
-                  </li>
-                ))}
-              </ul>
+              {sitesByDuration ? (
+                <WebsitesFrequencyBarChart sitesByDuration={sitesByDuration} />
+              ) : null}
             </div>
-            <div>{fetchedEvents?.length} samples</div>
+            {fetchedEvents ? (
+              <p>
+                {fetchedEvents?.length} samples (
+                {formatDuration(fetchedEvents?.length)})
+              </p>
+            ) : null}
           </div>
         )}
       </div>
@@ -209,7 +242,7 @@ const DashboardWrapper = () => {
   }
 
   return (
-    <div className="flex flex-col gap-2 p-2">
+    <div className="flex flex-col gap-2 p-3">
       {apiEndpoint === undefined ? (
         <p>loading...</p>
       ) : !apiEndpoint ? (
