@@ -162,7 +162,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
         ) : error ? (
           <div>error: {error}</div>
         ) : (
-          <div>
+          <div className="flex flex-col gap-2">
             <div>
               <h2 className="text-xl">Sites by time</h2>
               <ul>
@@ -173,6 +173,7 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
                 ))}
               </ul>
             </div>
+            <div>{fetchedEvents?.length} samples</div>
           </div>
         )}
       </div>
