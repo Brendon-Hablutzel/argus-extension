@@ -1,17 +1,41 @@
-import { useEffect, useMemo, useState } from 'react'
-import { formatDuration, getEndpoint, setEndpoint } from './util'
-import { EventsResponse, TabEventType } from './types'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { fetchMetrics, formatDuration, getEndpoint, setEndpoint } from './util'
+import { TabEventType } from './types'
+
+const toDatetimeLocal = (date: Date | null): string => {
+  if (date === null) {
+    return ''
+  }
+
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  )
+}
+
+const fromDatetimeLocal = (value: string): Date | null => {
+  if (value === '') {
+    return null
+  }
+
+  const [datePart, timePart] = value.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute] = timePart.split(':').map(Number)
+  return new Date(year, month - 1, day, hour, minute)
+}
 
 const Dashboard = ({ endpoint }: { endpoint: string }) => {
   // default since is 1 day ago
-  const [since] = useState(() => {
+  const [since, setSince] = useState<Date | null>(() => {
     const date = new Date()
     date.setDate(date.getDate() - 1)
     return date
   })
-  // default until is now
-  const [until] = useState(() => new Date())
-  const [profileIds] = useState([])
+
+  // default until is now (null)
+  const [until, setUntil] = useState<Date | null>(null)
+  const [profileIds, setProfileIds] = useState<string[]>([])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,34 +65,26 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
     return map
   }, [fetchedEvents])
 
+  const getMetrics = useCallback(async () => {
+    setLoading(true)
+
+    try {
+      const data = await fetchMetrics(endpoint, profileIds, since, until)
+
+      setFetchedEvents(data.events)
+    } catch (e) {
+      console.error(e)
+      setError(`${e}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [endpoint, profileIds, since, until])
+
   useEffect(() => {
-    ;(async () => {
-      setLoading(true)
-
-      try {
-        const searchParams = new URLSearchParams([
-          ...profileIds.map((profileId) => ['profileId', profileId]),
-          ['since', since.getTime().toString()],
-          ['until', until.getTime().toString()],
-        ])
-
-        const metricsUrl = new URL(
-          `${endpoint}/metrics?${searchParams.toString()}`
-        )
-
-        const res = await fetch(metricsUrl)
-        const rawData = await res.json()
-        const data = EventsResponse.parse(rawData)
-
-        setFetchedEvents(data.events)
-      } catch (e) {
-        console.error(e)
-        setError(`${e}`)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [endpoint, since, until, profileIds])
+    getMetrics()
+    // should only run on initial render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const sitesByDuration = useMemo(
     () =>
@@ -78,9 +94,69 @@ const Dashboard = ({ endpoint }: { endpoint: string }) => {
     [siteToDuration]
   )
 
+  const handleRefetch = () => {
+    getMetrics()
+  }
+
   return (
     <div className="flex justify-center">
-      <div className="w-[100%] max-w-[900px] border-[1px] border-black/20 rounded-lg p-2">
+      <div className="w-[100%] max-w-[1000px] border-[1px] border-black/20 rounded-lg p-2">
+        <div className="flex gap-3 justify-between items-center">
+          <div className="flex gap-2">
+            <label
+              className="font-bold text-sm flex items-center"
+              htmlFor="since-time"
+            >
+              Since
+            </label>
+            <input
+              className="text-base"
+              type="datetime-local"
+              id="since-time"
+              value={toDatetimeLocal(since)}
+              onChange={(e) => setSince(fromDatetimeLocal(e.target.value))}
+            />
+          </div>
+          <div className="flex gap-2">
+            <label
+              className="font-bold text-sm flex items-center"
+              htmlFor="until-time"
+            >
+              Until
+            </label>
+            <input
+              className="text-base"
+              type="datetime-local"
+              id="until-time"
+              value={toDatetimeLocal(until)}
+              onChange={(e) => setUntil(fromDatetimeLocal(e.target.value))}
+            />
+          </div>
+          <div className="flex gap-2">
+            <label
+              className="font-bold text-sm flex items-center"
+              htmlFor="profile-ids"
+            >
+              Profile ID(s)
+            </label>
+            <input
+              className="text-base px-1"
+              type="text"
+              id="profile-ids"
+              placeholder="profile1,profile2"
+              value={profileIds.join(',')}
+              onChange={(e) => setProfileIds(e.target.value.split(','))}
+            />
+          </div>
+          <div>
+            <button
+              className="text-sm hover:cursor-pointer px-2 py-1 border-[1px] border-black/20 rounded-lg font-bold"
+              onClick={handleRefetch}
+            >
+              Refetch
+            </button>
+          </div>
+        </div>
         {loading ? (
           <div>loading ...</div>
         ) : error ? (
@@ -156,7 +232,7 @@ const DashboardWrapper = () => {
           </form>
         </div>
       ) : (
-        <Dashboard endpoint={apiEndpoint} />
+        <Dashboard key={apiEndpoint} endpoint={apiEndpoint} />
       )}
       <div className="flex justify-center">
         {apiEndpoint ? (

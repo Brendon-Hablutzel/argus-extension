@@ -14,3 +14,5 @@ export type TabEventType = z.infer<typeof TabEvent>
 export const EventsResponse = z.object({
   events: z.array(TabEvent),
 })
+
+export type EventsResponseType = z.infer<typeof EventsResponse>
